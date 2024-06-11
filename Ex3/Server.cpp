@@ -6,31 +6,10 @@ SocketState sockets[MAX_SOCKETS] = { 0 };
 vector<Phrase> phrases;
 int socketsCount = 0;
 
-
-//to avoid globalism
-//to change socket array to vector
-//change all strings to char* etc
 //to check the 2 minutes thing in the task
 
 int main()
 {
-    Phrase p1, p2, p3, p4;
-
-    p1.id = 1;
-    p1.str = "hey";
-    p2.id = 2;
-    p2.str = "bla";
-    p3.id = 3;
-    p3.str = "martg";
-    p4.id = 4;
-    p4.str = "hey";
-
-    phrases.push_back(p1);
-    phrases.push_back(p2);
-    phrases.push_back(p3);
-    phrases.push_back(p4);
-
-
     StartServer();
     return 0;
 }
@@ -96,7 +75,7 @@ void StartServer()
             else if ((FD_ISSET(sockets[i].sock, &setOfSocketsInSendStatus)))
             {
                 countOfWaitingList--;
-                SendMessage(i);
+                SendAMessage(i);
             }
         }
     }
@@ -193,7 +172,7 @@ void ReceiveMessage(int index)
     }
 }
 
-void SendMessage(int index)
+void SendAMessage(int index)
 {
     SOCKET msgSocket = sockets[index].sock;
     int bytesSent = send(msgSocket, sockets[index].buffer, sockets[index].len, 0);
@@ -207,207 +186,6 @@ void SendMessage(int index)
     sockets[index].isSendNeeded = false;
 }
 
-void HandleHttpRequest(int socketIndex)
-{
-    char method[8], path[256], version[16];
-    sscanf(sockets[socketIndex].buffer, "%s %s %s", method, path, version);
-
-    if (strcmp(method, "GET") == 0)
-    {
-        HandleGetRequest(socketIndex, path);
-    }
-    else if (strcmp(method, "POST") == 0) 
-    {
-        HandlePostRequest(socketIndex, path);
-    }
-    else if (strcmp(method, "PUT") == 0)
-    {
-        HandlePutRequest(socketIndex, path);
-    }
-    else if (strcmp(method, "DELETE") == 0) 
-    {
-        HandleDeleteRequest(socketIndex, path);
-    }
-    else if (strcmp(method, "HEAD") == 0) 
-    {
-        HandleHeadRequest(socketIndex, path);
-    }
-    else if (strcmp(method, "OPTIONS") == 0)
-    {
-        ConstructHttpResponse(socketIndex, 200, "OK", GenerateOptionsMenu(),true, true);
-        
-    }
-    else if (strcmp(method, "TRACE") == 0) 
-    {
-        HandleTraceRequest(socketIndex, path);
-    }
-    else 
-    {
-        ConstructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.",false, true);
-    }
-}
-
-void HandleGetRequest(int socketIndex, const char* path) 
-{
-    const char* lang = GetLangQueryParam(path);
-    wstring htmlBody = GenerateHTMLBody(lang);
-
-    char* toSend = ConvertWstrToCharArray(htmlBody);
-
-    ConstructHttpResponse(socketIndex, 200, "OK", toSend,true, true);
-}
-
-void HandlePostRequest(int socketIndex, const char* path) {
-    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
-    if (body != NULL)
-    {
-        int givenId;
-        body += 4;  // Skip over the \r\n\r\n
-        AddPhrase(body, &givenId);
-        string msg = "The string \""+ string(body) +"\" was added successfully. Given id : " + to_string(givenId);
-        cout << "Time Server: " << msg << endl;
-        ConstructHttpResponse(socketIndex, 200, "OK", msg.c_str(),false, true);
-    }
-    else 
-    {
-        ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.",false, true);
-    }
-}
-
-void HandleTraceRequest(int socketIndex, const char* path) 
-{
-    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
-    if (body != NULL)
-    {
-        body += 4;  // Skip over the \r\n\r\n
-    }
-    else
-    {
-        body = EMPTY_STRING;
-    }
-    ConstructHttpResponse(socketIndex, 200, "OK", body,false, true);
-}
-
-void HandleDeleteRequest(int socketIndex, const char* path)
-{
-    int idToDelete = GetIdQueryParam(path);
-
-    if (idToDelete > 0 && RemovePhrase(idToDelete))
-    {
-        ConstructHttpResponse(socketIndex, 200, "OK", "Removed Succesfully",false, true);
-    }
-    else
-    {
-        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.",false, true);
-    }
-}
-
-void HandlePutRequest(int socketIndex, const char* path)
-{
-    int idToUpdate = GetIdQueryParam(path);
-
-    if (idToUpdate > 0 && IsInPhrases(idToUpdate))
-    {
-        const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
-        if (body != NULL)
-        {
-            body += 4;  // Skip over the \r\n\r\n
-            UpdatePhrase(idToUpdate, constConverter(body));
-            ConstructHttpResponse(socketIndex, 200, "OK", "Updated successfully",false, true);
-        }
-        else
-        {
-            ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.",false, true);
-        }
-    }
-    else
-    {
-        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.",false, true);
-    }
-
-}
-
-void HandleHeadRequest(int socketIndex, const char* path)
-{
-    const char* lang = GetLangQueryParam(path);
-    wstring htmlBody = GenerateHTMLBody(lang);
-
-    char* toSend = ConvertWstrToCharArray(htmlBody);
-    ConstructHttpResponse(socketIndex, 200, "OK", toSend,true, false);
-}
-
-void ConstructHttpResponse(int index, int statusCode, const char* statusMessage,const char* responseBody,bool isDynamicallyAllocated, bool isSendingBody, const char* lang)
-{
-    char* mutuableResponseBody, * bodyToSend;
-    char empty[] = "";
-
-    mutuableResponseBody = const_cast<char*>(responseBody);
-
-    if (isSendingBody)
-    {
-        bodyToSend = mutuableResponseBody;
-    }
-    else
-    {
-        bodyToSend = empty;
-    }
-
-    snprintf(sockets[index].buffer, sizeof(sockets[index].buffer),
-    "HTTP/1.1 %d %s\r\n"
-    "Content-Length: %zu\r\n"
-    "Content-Type: text/html; charset=UTF-8\r\n"
-    "Content-Language: %s\r\n"
-    "Connection: close\r\n"
-    "\r\n"
-    "%s",
-    statusCode, statusMessage, strlen(responseBody), lang, bodyToSend);
-
-    if (isDynamicallyAllocated)
-    {
-        delete responseBody;
-    }
-
-    sockets[index].len = strlen(sockets[index].buffer);
-    sockets[index].isSendNeeded = true;
-}
-
-const char* GetLangQueryParam(const char* path) 
-{
-    const char* langParamKey = "lang=";
-    int lenToSkip = strlen(langParamKey);
-
-    const char* lang = strstr(path, "lang=");
-    char res[3];
-    if (lang != NULL) 
-    {
-        lang += lenToSkip;
-        if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0 || strncmp(lang, "es", 2) == 0)
-        {
-            strncpy(const_cast<char*>(res), lang, 2);
-            res[2] = '\0';
-            return res;
-        }
-    }
-    return DEFAULT_LANGUAGE;
-}
-
-int GetIdQueryParam(const char* path)
-{
-    int idNum;
-    const char* idParamKey = "id=";
-    int lenToSkip = strlen(idParamKey);
-
-    const char* id = strstr(path, idParamKey);
-    
-    if (id != NULL)
-    {
-        id += lenToSkip;
-    }
-
-    idNum = atoi(id);
-
-    return idNum;
-}
 
 void LoadDLL()
 {
@@ -464,25 +242,219 @@ char* GenerateOptionsMenu()
         "This server holds a simple array of items, each with a unique ID and string.\n"
         "The server offers the following options:\n"
         "[GET] - Retrieves HTML text displaying a welcome message, list of current items, and a timestamp. (text/html)\n"
-        "   Note: You can specify the language with the 'lang' query parameter (e.g., lang=en).\n"
-        "[POST] - Adds new data to the server. The request body should contain the string to be added.\n"
+        "Note: You can specify the language with the 'lang' query parameter. e.g., lang=en (options: en,he,fr,es).\n"
+        "[POST] - Adds new string data to the server. The request body should contain the string to be added (can't be empty).\n"
         "[PUT] - Updates existing data. Requires an 'id' query parameter with the ID of the item to update, and a body with the new string.\n"
         "[DELETE] - Deletes an item. Requires an 'id' query parameter with the ID of the item to delete.\n"
-        "[HEAD] - Same as GET request, but returns only the header without the body.\n"
+        "[HEAD] - Same as GET request, but returns only the headers without the body.\n"
         "[TRACE] - Returns the same body as the request body (echo).\n"
         "[OPTIONS] - Lists all available options.\n";
 
-
     size_t length = strlen(menu) + 1; 
-
-
     char* result = new char[length];
-
     strcpy(result, menu);
 
     return result;
 }
 
+void HandleHttpRequest(int socketIndex)
+{
+    char method[8], path[256], version[16];
+    sscanf(sockets[socketIndex].buffer, "%s %s %s", method, path, version);
 
+    if (strcmp(method, "GET") == 0)
+    {
+        HandleGetRequest(socketIndex, path);
+    }
+    else if (strcmp(method, "POST") == 0)
+    {
+        HandlePostRequest(socketIndex, path);
+    }
+    else if (strcmp(method, "PUT") == 0)
+    {
+        HandlePutRequest(socketIndex, path);
+    }
+    else if (strcmp(method, "DELETE") == 0)
+    {
+        HandleDeleteRequest(socketIndex, path);
+    }
+    else if (strcmp(method, "HEAD") == 0)
+    {
+        HandleHeadRequest(socketIndex, path);
+    }
+    else if (strcmp(method, "OPTIONS") == 0)
+    {
+        ConstructHttpResponse(socketIndex, 200, "OK", GenerateOptionsMenu(), true, true);
 
+    }
+    else if (strcmp(method, "TRACE") == 0)
+    {
+        HandleTraceRequest(socketIndex, path);
+    }
+    else
+    {
+        ConstructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.", false, true);
+    }
+}
 
+void HandleGetRequest(int socketIndex, const char* path)
+{
+    const char* lang = GetLangQueryParam(path);
+    wstring htmlBody = GenerateHTMLBody(lang);
+
+    char* toSend = ConvertWstrToCharArray(htmlBody);
+
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, true);
+}
+
+void HandlePostRequest(int socketIndex, const char* path) {
+    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+    if (body != NULL && body[4]!='\0')
+    {
+        int givenId;
+        body += 4;  // Skip over the \r\n\r\n
+        AddPhrase(body, &givenId);
+        string msg = "The string \"" + string(body) + "\" was added successfully. Given id : " + to_string(givenId);
+        cout << "Time Server: " << msg << endl;
+        ConstructHttpResponse(socketIndex, 200, "OK", msg.c_str(), false, true);
+    }
+    else
+    {
+        ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", false, true);
+    }
+}
+
+void HandleTraceRequest(int socketIndex, const char* path)
+{
+    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+    if (body != NULL)
+    {
+        body += 4;  // Skip over the \r\n\r\n
+    }
+    else
+    {
+        body = EMPTY_STRING;
+    }
+    ConstructHttpResponse(socketIndex, 200, "OK", body, false, true);
+}
+
+void HandleDeleteRequest(int socketIndex, const char* path)
+{
+    int idToDelete = GetIdQueryParam(path);
+
+    if (idToDelete > 0 && RemovePhrase(idToDelete))
+    {
+        ConstructHttpResponse(socketIndex, 200, "OK", "Removed Succesfully", false, true);
+    }
+    else
+    {
+        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", false, true);
+    }
+}
+
+void HandlePutRequest(int socketIndex, const char* path)
+{
+    int idToUpdate = GetIdQueryParam(path);
+
+    if (idToUpdate > 0 && IsInPhrases(idToUpdate))
+    {
+        const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+        if (body != NULL && body[4] != '\0')
+        {
+            body += 4;  // Skip over the \r\n\r\n
+            UpdatePhrase(idToUpdate, ConstConverter(body));
+            ConstructHttpResponse(socketIndex, 200, "OK", "Updated successfully", false, true);
+        }
+        else
+        {
+            ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", false, true);
+        }
+    }
+    else
+    {
+        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", false, true);
+    }
+
+}
+
+void HandleHeadRequest(int socketIndex, const char* path)
+{
+    const char* lang = GetLangQueryParam(path);
+    wstring htmlBody = GenerateHTMLBody(lang);
+
+    char* toSend = ConvertWstrToCharArray(htmlBody);
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, false);
+}
+
+void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isSendingBody, const char* lang)
+{
+    char* mutuableResponseBody, * bodyToSend;
+    char empty[] = "";
+
+    mutuableResponseBody = const_cast<char*>(responseBody);
+
+    if (isSendingBody)
+    {
+        bodyToSend = mutuableResponseBody;
+    }
+    else
+    {
+        bodyToSend = empty;
+    }
+
+    snprintf(sockets[index].buffer, sizeof(sockets[index].buffer),
+        "HTTP/1.1 %d %s\r\n"
+        "Content-Length: %zu\r\n"
+        "Content-Type: text/html; charset=UTF-8\r\n"
+        "Content-Language: %s\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "%s",
+        statusCode, statusMessage, strlen(responseBody), lang, bodyToSend);
+
+    if (isDynamicallyAllocated)
+    {
+        delete responseBody;
+    }
+
+    sockets[index].len = strlen(sockets[index].buffer);
+    sockets[index].isSendNeeded = true;
+}
+
+const char* GetLangQueryParam(const char* path)
+{
+    const char* langParamKey = "lang=";
+    int lenToSkip = strlen(langParamKey);
+
+    const char* lang = strstr(path, "lang=");
+    char res[3];
+    if (lang != NULL)
+    {
+        lang += lenToSkip;
+        if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0 || strncmp(lang, "es", 2) == 0)
+        {
+            strncpy(const_cast<char*>(res), lang, 2);
+            res[2] = '\0';
+            return res;
+        }
+    }
+    return DEFAULT_LANG;
+}
+
+int GetIdQueryParam(const char* path)
+{
+    int idNum;
+    const char* idParamKey = "id=";
+    int lenToSkip = strlen(idParamKey);
+
+    const char* id = strstr(path, idParamKey);
+
+    if (id != NULL)
+    {
+        id += lenToSkip;
+    }
+
+    idNum = atoi(id);
+
+    return idNum;
+}

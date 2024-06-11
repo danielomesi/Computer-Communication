@@ -12,70 +12,66 @@ string GetTimeAsString()
     return timeString;
 }
 
-unordered_map<string, wstring> getTranslations(const string& language)
+unordered_map<string, wstring> GetTranslations(const string& language)
 {
     unordered_map<string, wstring> translations;
 
     if (language == "en") 
     {
         translations["header"] = L"Introduction To Computer Communication - Ex. 3";
-        translations["welcome"] = L"Welcome to our page!";
+        translations["welcome"] = L"Welcome to our server! To learn about the server options, please send a request using the OPTIONS method";
     }
     else if (language == "he") 
     {
         translations["header"] = L"מבוא לתקשורת מחשבים - תרגיל 3";
-        translations["welcome"] = L"!ברוכים הבאים לעמוד שלנו";
+        translations["welcome"] = L"OPTIONS ברוכים הבאים לשרת שלנו! על מנת ללמוד על אופציות השרת, יש לשלוח בקשה עם מתודת";
     }
     else if (language == "fr")
     {
         translations["header"] = L"Introduction à la communication informatique - Ex. 3";
-        translations["welcome"] = L"Bienvenue sur notre page !";
+        translations["welcome"] = L"Bienvenue sur notre serveur! Pour découvrir les options du serveur, veuillez envoyer une requête en utilisant la méthode OPTIONS";
     }
     else if (language == "es")
     {
         translations["header"] = L"Introducción a la comunicación informática - Ej. 3";
-        translations["welcome"] = L"¡Bienvenido a nuestra página!";
+        translations["welcome"] = L"Bienvenido a nuestro servidor! Para conocer las opciones del servidor, por favor envía una solicitud utilizando el método OPTIONS";
     }
 
     return translations;
 }
 
 
-std::wstring ReadFileIntoWString(const char* filename) {
-    std::wifstream file(filename);
-    if (!file.is_open()) {
+wstring ReadFileIntoWString(const char* filename)
+{
+    string directry = HTML_FILE_DIRECTORY_PATH;
+    string filePath = directry + "\\" + filename;
+
+    wifstream file(filePath);
+    if (!file.is_open()) 
+    {
         throw std::runtime_error("Unable to open file: ");
     }
 
-    // Read the entire file into a string
-    std::wstring content((std::istreambuf_iterator<wchar_t>(file)), std::istreambuf_iterator<wchar_t>());
+    wstring content((istreambuf_iterator<wchar_t>(file)), istreambuf_iterator<wchar_t>());
 
     return content;
 }
 
-std::wstring InsertTextIntoWString(const std::wstring& data, const std::wstring& newText, const std::wstring& insertionPoint) {
+wstring InsertTextIntoWString(const wstring& data, const wstring& newText, const wstring& insertionPoint)
+{
     size_t insertionPos = data.find(insertionPoint);
-    if (insertionPos == std::wstring::npos) {
-        throw std::runtime_error("Insertion point not found");
-    }
+    wstring newData = data.substr(0, insertionPos);
 
-    // Copy the original data before the insertion point
-    std::wstring newData = data.substr(0, insertionPos);
-
-    // Copy the new text
     newData += newText;
-
-    // Copy the original data after the insertion point
     newData += data.substr(insertionPos);
 
     return newData;
 }
 
-std::wstring GenerateHTMLBody(const char* lang) {
+wstring GenerateHTMLBody(const char* lang)
+{
     std::wstring htmlBody = ReadFileIntoWString(HTML_FILE_NAME);
-
-    auto translations = getTranslations(lang);
-
+    auto translations = GetTranslations(lang);
     std::wstring itemsHtml;
 
     for (const auto& item : phrases) {
@@ -85,23 +81,19 @@ std::wstring GenerateHTMLBody(const char* lang) {
         itemsHtml += L"</div>\n";
     }
 
-    // Insert items HTML into the template
-    std::wstring itemsPlaceholder = L"<div id=\"items\">\n";
+    wstring itemsPlaceholder = L"<div id=\"items\">\n";
     htmlBody = InsertTextIntoWString(htmlBody, itemsHtml, itemsPlaceholder);
 
-    // Insert translations into the template
-    std::wstring headerPlaceholder = L"<h1 id=\"header\">";
+    wstring headerPlaceholder = L"<h1 id=\"header\">";
     htmlBody = InsertTextIntoWString(htmlBody, translations.at("header"), headerPlaceholder);
 
-    std::wstring welcomePlaceholder = L"<div id=\"welcome-message\">\n";
+    wstring welcomePlaceholder = L"<div id=\"welcome-message\">\n";
     htmlBody = InsertTextIntoWString(htmlBody, translations.at("welcome"), welcomePlaceholder);
 
-    // Insert current time into the template
-    std::wstring timeStampPlaceholder = L"<div id=\"current-time\">\n";
+    wstring timeStampPlaceholder = L"<div id=\"current-time\">\n";
     htmlBody = InsertTextIntoWString(htmlBody, ConvertStrToWstr(GetTimeAsString()), timeStampPlaceholder);
 
-    // Update the language attribute of the HTML tag
-    std::wstring langAttributeStr = L"lang=\"";
+    wstring langAttributeStr = L"lang=\"";
     htmlBody = InsertTextIntoWString(htmlBody, ConvertStrToWstr(lang), langAttributeStr);
 
     return htmlBody;
@@ -159,7 +151,7 @@ bool IsInPhrases(int id)
     return false;
 }
 
-string constConverter(const char* chars)
+string ConstConverter(const char* chars)
 {
     string str;
     int i = 0;

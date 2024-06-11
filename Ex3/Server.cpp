@@ -8,8 +8,9 @@ int socketsCount = 0;
 
 
 //to avoid globalism
-//to change socket array to vector\
+//to change socket array to vector
 //change all strings to char* etc
+//
 
 int main()
 {
@@ -22,7 +23,7 @@ int main()
     p3.id = 3;
     p3.str = "martg";
     p4.id = 4;
-    p4.str = "dude";
+    p4.str = "hey";
 
     phrases.push_back(p1);
     phrases.push_back(p2);
@@ -244,18 +245,29 @@ void handleHttpRequest(int socketIndex)
 void handleGetRequest(int socketIndex, const char* path) 
 {
     const char* lang = GetLangQueryParam(path);
-    string htmlBody = GenerteHTMLBody(lang);
-            
-    constructHttpResponse(socketIndex, 200, "OK", htmlBody.c_str(), true);
+    
+    wstring htmlBody = GenerateHTMLBody(lang);
+    //char* htmlBody = GenerateHTMLBody(lang);
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+    // Convert the wide string to narrow string (UTF-8)
+    std::string narrowString = converter.to_bytes(htmlBody);
+
+    // Allocate memory for the char array and copy the contents of narrowString
+    char* charArray = new char[narrowString.length() + 1]; // +1 for null terminator
+    std::strcpy(charArray, narrowString.c_str());
+    constructHttpResponse(socketIndex, 200, "OK", charArray, true);
 
 }
 
 void handlePostRequest(int socketIndex, const char* path) {
     const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
     if (body != NULL) {
+        int givenId;
         body += 4;  // Skip over the \r\n\r\n
-        AddPhrase(body);
-        constructHttpResponse(socketIndex, 200, "OK", "Added successfully", true);
+        AddPhrase(body, &givenId);
+        string msg = "Added successfully, given id: " + to_string(givenId);
+        constructHttpResponse(socketIndex, 200, "OK", msg.c_str(), true);
     }
     else 
     {
@@ -319,8 +331,8 @@ void handlePutRequest(int socketIndex, const char* path)
 void handleHeadRequest(int socketIndex, const char* path)
 {
     const char* lang = GetLangQueryParam(path);
-    string htmlBody = GenerteHTMLBody(lang);
-
+    //string htmlBody = GenerateHTMLBody(lang);
+    string htmlBody = "";
     constructHttpResponse(socketIndex, 200, "OK", htmlBody.c_str(), false);
 }
 
@@ -364,7 +376,8 @@ const char* GetLangQueryParam(const char* path)
     if (lang != NULL) 
     {
         lang += lenToSkip;
-        if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0) {
+        if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0 || strncmp(lang, "es", 2) == 0)
+        {
             strncpy(const_cast<char*>(res), lang, 2);
             res[2] = '\0';
             return res;

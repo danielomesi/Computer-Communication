@@ -11,11 +11,13 @@
 #include <vector>
 #include <unordered_map>
 #include <codecvt>
+
+
 using namespace std;
 
 #pragma comment(lib, "Ws2_32.lib")
 
-#define TIME_PORT 27015
+#define TIME_PORT 8080
 #define MAX_SOCKETS 60
 #define MAX_PHRASES 100
 #define EMPTY 0
@@ -23,7 +25,7 @@ using namespace std;
 #define CLIENT_CHANNEL 2
 #define GET 1
 #define POST 2
-#define HTML_FILE_NAME "website.html"
+#define HTML_FILE_NAME "index.html"
 #define DEFAULT_LANGUAGE "en"
 #define EMPTY_STRING ""
 #define BUFFER_SIZE 8192

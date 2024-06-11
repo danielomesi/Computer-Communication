@@ -8,7 +8,8 @@ int socketsCount = 0;
 
 
 //to avoid globalism
-//to change socket array to vector
+//to change socket array to vector\
+//change all strings to char* etc
 
 int main()
 {
@@ -203,74 +204,191 @@ void sendMessage(int index) {
     sockets[index].isSendNeeded = false;
 }
 
-void handleHttpRequest(int index) {
+void handleHttpRequest(int socketIndex)
+{
     char method[8], path[256], version[16];
-    sscanf(sockets[index].buffer, "%s %s %s", method, path, version);
+    sscanf(sockets[socketIndex].buffer, "%s %s %s", method, path, version);
 
-    if (strcmp(method, "GET") == 0) {
-        handleGetRequest(index, path);
+    if (strcmp(method, "GET") == 0)
+    {
+        handleGetRequest(socketIndex, path);
     }
     else if (strcmp(method, "POST") == 0) 
     {
-        //    
+        handlePostRequest(socketIndex, path);
     }
-    else if (strcmp(method, "PUT") == 0) {
-        // Handle HEAD method
+    else if (strcmp(method, "PUT") == 0)
+    {
+        handlePutRequest(socketIndex, path);
     }
-    else if (strcmp(method, "DELETE") == 0) {
-        handlePostRequest(index, path);
+    else if (strcmp(method, "DELETE") == 0) 
+    {
+        handleDeleteRequest(socketIndex, path);
     }
-    else if (strcmp(method, "HEAD") == 0) {
-        // Handle PUT method
+    else if (strcmp(method, "HEAD") == 0) 
+    {
+        handleHeadRequest(socketIndex, path);
     }
-    else if (strcmp(method, "OPTIONS") == 0) {
-        // Handle DELETE method
+    else if (strcmp(method, "OPTIONS") == 0)
+    {
+        constructHttpResponse(socketIndex, 200, "OK", GenerateOptionsMenu(), true);
     }
     else if (strcmp(method, "TRACE") == 0) {
-        // Handle TRACE method
+        handleTraceRequest(socketIndex, path);
     }
     else {
-        constructHttpResponse(index, 501, "Not Implemented", "This server only supports GET and POST.");
+        constructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.", true);
     }
 }
 
-void handleGetRequest(int index, const char* path) {
-    if (strcmp(path, "/website") == 0) {
-        
-        string htmlBody = GenerateHtmlBody();
+void handleGetRequest(int socketIndex, const char* path) 
+{
+    const char* lang = GetLangQueryParam(path);
+    string htmlBody = GenerteHTMLBody(lang);
             
-        constructHttpResponse(index, 200, "OK", htmlBody.c_str());
+    constructHttpResponse(socketIndex, 200, "OK", htmlBody.c_str(), true);
+
+}
+
+void handlePostRequest(int socketIndex, const char* path) {
+    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+    if (body != NULL) {
+        body += 4;  // Skip over the \r\n\r\n
+        AddPhrase(body);
+        constructHttpResponse(socketIndex, 200, "OK", "Added successfully", true);
     }
     else 
     {
-        constructHttpResponse(index, 404, "Not Found", "The requested resource was not found on this server.");
+        constructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", true);
     }
 }
 
-void handlePostRequest(int index, const char* path) {
-    const char* body = strstr(sockets[index].buffer, "\r\n\r\n");
-    if (body != NULL) {
-        body += 4;  // Skip over the \r\n\r\n
-        constructHttpResponse(index, 200, "OK", body);
-    }
-    else {
-        constructHttpResponse(index, 400, "Bad Request", "No body in the request.");
-    }
-}
-
-void constructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody)
+void handleTraceRequest(int socketIndex, const char* path) 
 {
-        snprintf(sockets[index].buffer, sizeof(sockets[index].buffer),
-        "HTTP/1.1 %d %s\r\n"
-        "Content-Length: %zu\r\n"
-        "Content-Type: text/html\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "%s",
-        statusCode, statusMessage, strlen(responseBody), responseBody);
+    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+    if (body != NULL)
+    {
+        body += 4;  // Skip over the \r\n\r\n
+    }
+    else
+    {
+        body = EMPTY_STRING;
+    }
+    constructHttpResponse(socketIndex, 200, "OK", body, true);
+}
+
+void handleDeleteRequest(int socketIndex, const char* path)
+{
+    int idToDelete = GetIdQueryParam(path);
+
+    if (idToDelete > 0 && RemovePhrase(idToDelete))
+    {
+        constructHttpResponse(socketIndex, 200, "OK", "Removed Succesfully", true);
+    }
+    else
+    {
+        constructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", true);
+    }
+}
+
+void handlePutRequest(int socketIndex, const char* path)
+{
+    int idToUpdate = GetIdQueryParam(path);
+
+    if (idToUpdate > 0 && IsInPhrases(idToUpdate))
+    {
+        const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+        if (body != NULL)
+        {
+            body += 4;  // Skip over the \r\n\r\n
+            UpdatePhrase(idToUpdate, constConverter(body));
+            constructHttpResponse(socketIndex, 200, "OK", "Updated successfully", true);
+        }
+        else
+        {
+            constructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", true);
+        }
+    }
+    else
+    {
+        constructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", true);
+    }
+
+}
+
+void handleHeadRequest(int socketIndex, const char* path)
+{
+    const char* lang = GetLangQueryParam(path);
+    string htmlBody = GenerteHTMLBody(lang);
+
+    constructHttpResponse(socketIndex, 200, "OK", htmlBody.c_str(), false);
+}
+
+
+
+void constructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isSendingBody, const char* lang)
+{
+    char* mutuableResponseBody;
+    char empty[1] = "";
+
+    if (isSendingBody)
+    {
+        mutuableResponseBody = const_cast<char*>(responseBody);
+    }
+    else
+    {
+        mutuableResponseBody = empty;
+    }
+
+    snprintf(sockets[index].buffer, sizeof(sockets[index].buffer),
+    "HTTP/1.1 %d %s\r\n"
+    "Content-Length: %zu\r\n"
+    "Content-Type: text/html; charset=UTF-8\r\n"
+    "Content-Language: %s\r\n"
+    "Connection: close\r\n"
+    "\r\n"
+    "%s",
+    statusCode, statusMessage, strlen(responseBody), lang, mutuableResponseBody);
 
     sockets[index].len = strlen(sockets[index].buffer);
     sockets[index].isSendNeeded = true;
+}
+
+const char* GetLangQueryParam(const char* path) 
+{
+    const char* langParamKey = "lang=";
+    int lenToSkip = strlen(langParamKey);
+
+    const char* lang = strstr(path, "lang=");
+    char res[3];
+    if (lang != NULL) 
+    {
+        lang += lenToSkip;
+        if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0) {
+            strncpy(const_cast<char*>(res), lang, 2);
+            res[2] = '\0';
+            return res;
+        }
+    }
+    return DEFAULT_LANGUAGE;
+}
+
+int GetIdQueryParam(const char* path)
+{
+    int idNum;
+    const char* idParamKey = "id=";
+    int lenToSkip = strlen(idParamKey);
+
+    const char* id = strstr(path, idParamKey);
+    
+    if (id != NULL)
+    {
+        id += lenToSkip;
+    }
+
+    idNum = atoi(id);
+
+    return idNum;
 }
 
 void LoadDLL()
@@ -322,6 +440,32 @@ void ListenForClients(SOCKET& listenSocket)
     }
 }
 
+char* GenerateOptionsMenu() 
+{
+    const char* menu =
+        "This server holds a simple array of items, each with a unique ID and string.\n"
+        "The server offers the following options:\n"
+        "[GET] - Retrieves HTML text displaying a welcome message, list of current items, and a timestamp. (text/html)\n"
+        "   Note: You can specify the language with the 'lang' query parameter (e.g., lang=en).\n"
+        "[POST] - Adds new data to the server. The request body should contain the string to be added.\n"
+        "[PUT] - Updates existing data. Requires an 'id' query parameter with the ID of the item to update, and a body with the new string.\n"
+        "[DELETE] - Deletes an item. Requires an 'id' query parameter with the ID of the item to delete.\n"
+        "[HEAD] - Same as GET request, but returns only the header without the body.\n"
+        "[TRACE] - Returns the same body as the request body (echo).\n"
+        "[OPTIONS] - Lists all available options.\n";
+
+    // Calculate the length of the menu string
+    size_t length = strlen(menu) + 1; // +1 for the null terminator
+
+    // Allocate memory for the new string
+    char* result = new char[length];
+
+    // Copy the menu string into the result buffer
+    strcpy(result, menu);
+
+    // Return the result
+    return result;
+}
 
 
 

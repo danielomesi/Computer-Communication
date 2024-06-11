@@ -9,6 +9,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <codecvt>
 using namespace std;
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -21,6 +23,10 @@ using namespace std;
 #define CLIENT_CHANNEL 2
 #define GET 1
 #define POST 2
+#define HTML_FILE_NAME "website.html"
+#define DEFAULT_LANGUAGE "en"
+#define EMPTY_STRING ""
+#define BUFFER_SIZE 8192
 
 typedef struct SocketState
 {
@@ -29,7 +35,7 @@ typedef struct SocketState
     bool isWaitingForClientMsg;             // Receiving?
     bool isSendNeeded;             // Sending?
     int sendSubType;      // Sending sub-type
-    char buffer[4096];    // Increase buffer size for HTTP requests
+    char buffer[BUFFER_SIZE];    // Increase buffer size for HTTP requests
     int len;
 } SocketState;
 
@@ -52,11 +58,18 @@ void sendMessage(int index);
 void handleHttpRequest(int index);
 void handleGetRequest(int index, const char* path);
 void handlePostRequest(int index, const char* path);
-void constructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody);
+void handleDeleteRequest(int socketIndex, const char* path);
+void handlePutRequest(int socketIndex, const char* path);
+void handleHeadRequest(int socketIndex, const char* path);
+void handleTraceRequest(int socketIndex, const char* path);
+void constructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isHeadersOnly, const char* lang = DEFAULT_LANGUAGE);
+const char* GetLangQueryParam(const char* path);
+int GetIdQueryParam(const char* path);
 void LoadDLL();
 void PerformExit();
 SOCKET GetListenSocket();
 void BindServerAddressToListenSocket(SOCKET& listenSocket, sockaddr_in& serverService);
 void ListenForClients(SOCKET& listenSocket);
+char* GenerateOptionsMenu();
 
 

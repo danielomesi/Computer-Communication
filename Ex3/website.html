@@ -1,49 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Cool Website</title>
+    <title>Website</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        header {
-            background-color: #007bff;
-            color: #fff;
-            padding: 10px;
-            text-align: center;
+            padding: 20px;
+            background-color: #0099cc; /* Cool blue background */
+            color: white; /* White text for contrast */
+            text-align: center; /* Center align all text */
         }
         .container {
-            max-width: 800px;
-            margin: 20px auto;
+            background-color: #006699; /* Slightly darker blue for the container */
             padding: 20px;
-            background-color: #fff;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+            width: 80%;
         }
-        h1 {
-            font-size: 2em;
-            margin-bottom: 20px;
-            color: #007bff;
+        .item {
+            margin-bottom: 10px;
         }
-        p {
+        .item h2 {
+            margin: 0;
             font-size: 1.2em;
-            line-height: 1.6;
+        }
+        .item p {
+            margin: 5px 0 0;
+            font-size: 1em;
+            color: #e0e0e0; /* Lighter text color for items */
+        }
+        #welcome-message {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        #current-time {
+            margin-top: 20px;
+            font-size: 1em;
+            color: #e0e0e0; /* Lighter text color for time */
+        }
+        #language-options {
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to My Cool Website</h1>
-    </header>
     <div class="container">
-        <p>This is a simple website created with HTML and CSS.</p>
-        <p>Feel free to explore and have fun!</p>
+        <h1 id="header"></h1>
+        <!-- Language options will be inserted here -->
+        <div id="language-options">
+        </div>
+        <!-- Welcome message will be inserted here -->
+        <div id="welcome-message">
+        </div>
+        <!-- Items will be inserted here -->
+        <div id="items">
+        </div>
+        <!-- Current time will be inserted here -->
+        <div id="current-time">
+        </div>
     </div>
 </body>
 </html>

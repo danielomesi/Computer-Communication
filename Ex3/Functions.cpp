@@ -102,7 +102,15 @@ wstring GenerateHTMLBody(const char* lang)
 
 void AddPhrase(const char* str, int* givenId)
 {
-    int id = phrases.size() + 1;
+    int id;
+    if (phrases.empty())
+    {
+        id = 1;
+    }
+    else
+    {
+        id = phrases.back().id + 1;
+    }
     *givenId = id;
     Phrase phrase;
     phrase.id = id;

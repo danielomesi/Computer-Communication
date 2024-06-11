@@ -186,7 +186,6 @@ void SendAMessage(int index)
     sockets[index].isSendNeeded = false;
 }
 
-
 void LoadDLL()
 {
     WSAData wsaData;

@@ -10,7 +10,7 @@ int socketsCount = 0;
 //to avoid globalism
 //to change socket array to vector
 //change all strings to char* etc
-//
+//to check the 2 minutes thing in the task
 
 int main()
 {
@@ -31,11 +31,11 @@ int main()
     phrases.push_back(p4);
 
 
-    startServer();
+    StartServer();
     return 0;
 }
 
-void startServer()
+void StartServer()
 {
     LoadDLL();
         
@@ -48,7 +48,7 @@ void startServer()
 
     BindServerAddressToListenSocket(listenSocket, serverService);
     ListenForClients(listenSocket);
-    addSocket(listenSocket, LISTEN);
+    AddSocket(listenSocket, LISTEN);
 
     while (true)
     {
@@ -85,18 +85,18 @@ void startServer()
                 countOfWaitingList--;
                 if (sockets[i].socket_type == LISTEN)
                 {
-                    acceptConnection(i);
+                    AcceptConnection(i);
                 }
                 else
                 {
-                    receiveMessage(i);
+                    ReceiveMessage(i);
                 }
             }
 
             else if ((FD_ISSET(sockets[i].sock, &setOfSocketsInSendStatus)))
             {
                 countOfWaitingList--;
-                sendMessage(i);
+                SendMessage(i);
             }
         }
     }
@@ -106,7 +106,7 @@ void startServer()
     WSACleanup();
 }
 
-bool addSocket(SOCKET id, int status)
+bool AddSocket(SOCKET id, int status)
 {
     for (int i = 0; i < MAX_SOCKETS; i++)
     {
@@ -124,14 +124,14 @@ bool addSocket(SOCKET id, int status)
     return false;
 }
 
-void removeSocket(int index)
+void RemoveSocket(int index)
 {
     sockets[index].isWaitingForClientMsg = EMPTY;
     sockets[index].isSendNeeded = EMPTY;
     socketsCount--;
 }
 
-void acceptConnection(int index) 
+void AcceptConnection(int index) 
 {
     SOCKET sock = sockets[index].sock;
     struct sockaddr_in clientAddressHolder;
@@ -146,32 +146,35 @@ void acceptConnection(int index)
     cout << "Time Server: Client " << inet_ntoa(clientAddressHolder.sin_addr) << ":" << ntohs(clientAddressHolder.sin_port) << " is connected." << endl;
 
     unsigned long flag = 1;
-    if (ioctlsocket(clientChannelSocket, FIONBIO, &flag) != 0) {
+    if (ioctlsocket(clientChannelSocket, FIONBIO, &flag) != 0)
+    {
         cout << "Time Server: Error at ioctlsocket(): " << WSAGetLastError() << endl;
     }
 
-    if (!addSocket(clientChannelSocket, CLIENT_CHANNEL))
+    if (!AddSocket(clientChannelSocket, CLIENT_CHANNEL))
     {
         cout << "\t\tToo many connections, dropped!\n";
         closesocket(sock);
     }
 }
 
-void receiveMessage(int index)
+void ReceiveMessage(int index)
 {
     SOCKET sock = sockets[index].sock;
     int len = sockets[index].len;
     int bytesRecv = recv(sock, &sockets[index].buffer[len], sizeof(sockets[index].buffer) - len, 0);
 
-    if (SOCKET_ERROR == bytesRecv) {
+    if (SOCKET_ERROR == bytesRecv) 
+    {
         cout << "Time Server: Error at recv(): " << WSAGetLastError() << endl;
         closesocket(sock);
-        removeSocket(index);
+        RemoveSocket(index);
         return;
     }
-    if (bytesRecv == 0) {
+    if (bytesRecv == 0)
+    {
         closesocket(sock);
-        removeSocket(index);
+        RemoveSocket(index);
         return;
     }
     else
@@ -185,97 +188,93 @@ void receiveMessage(int index)
 
         if (sockets[index].len > 0)
         {
-            handleHttpRequest(index);
+            HandleHttpRequest(index);
         }
     }
 }
 
-void sendMessage(int index) {
+void SendMessage(int index)
+{
     SOCKET msgSocket = sockets[index].sock;
     int bytesSent = send(msgSocket, sockets[index].buffer, sockets[index].len, 0);
-    if (SOCKET_ERROR == bytesSent) {
+    if (SOCKET_ERROR == bytesSent)
+    {
         cout << "Time Server: Error at send(): " << WSAGetLastError() << endl;
         return;
     }
 
-    cout << "Time Server: Sent: " << bytesSent << " bytes of:" << endl;
-    cout << "---start---" << endl;
-    cout<<sockets[index].buffer<<endl;
-    cout << "---end---" << endl;
+    cout << "Time Server: Sent: " << bytesSent << " bytes" << endl;
     sockets[index].isSendNeeded = false;
 }
 
-void handleHttpRequest(int socketIndex)
+void HandleHttpRequest(int socketIndex)
 {
     char method[8], path[256], version[16];
     sscanf(sockets[socketIndex].buffer, "%s %s %s", method, path, version);
 
     if (strcmp(method, "GET") == 0)
     {
-        handleGetRequest(socketIndex, path);
+        HandleGetRequest(socketIndex, path);
     }
     else if (strcmp(method, "POST") == 0) 
     {
-        handlePostRequest(socketIndex, path);
+        HandlePostRequest(socketIndex, path);
     }
     else if (strcmp(method, "PUT") == 0)
     {
-        handlePutRequest(socketIndex, path);
+        HandlePutRequest(socketIndex, path);
     }
     else if (strcmp(method, "DELETE") == 0) 
     {
-        handleDeleteRequest(socketIndex, path);
+        HandleDeleteRequest(socketIndex, path);
     }
     else if (strcmp(method, "HEAD") == 0) 
     {
-        handleHeadRequest(socketIndex, path);
+        HandleHeadRequest(socketIndex, path);
     }
     else if (strcmp(method, "OPTIONS") == 0)
     {
-        constructHttpResponse(socketIndex, 200, "OK", GenerateOptionsMenu(), true);
+        ConstructHttpResponse(socketIndex, 200, "OK", GenerateOptionsMenu(),true, true);
+        
     }
-    else if (strcmp(method, "TRACE") == 0) {
-        handleTraceRequest(socketIndex, path);
-    }
-    else {
-        constructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.", true);
-    }
-}
-
-void handleGetRequest(int socketIndex, const char* path) 
-{
-    const char* lang = GetLangQueryParam(path);
-    
-    wstring htmlBody = GenerateHTMLBody(lang);
-    //char* htmlBody = GenerateHTMLBody(lang);
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-
-    // Convert the wide string to narrow string (UTF-8)
-    std::string narrowString = converter.to_bytes(htmlBody);
-
-    // Allocate memory for the char array and copy the contents of narrowString
-    char* charArray = new char[narrowString.length() + 1]; // +1 for null terminator
-    std::strcpy(charArray, narrowString.c_str());
-    constructHttpResponse(socketIndex, 200, "OK", charArray, true);
-
-}
-
-void handlePostRequest(int socketIndex, const char* path) {
-    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
-    if (body != NULL) {
-        int givenId;
-        body += 4;  // Skip over the \r\n\r\n
-        AddPhrase(body, &givenId);
-        string msg = "Added successfully, given id: " + to_string(givenId);
-        constructHttpResponse(socketIndex, 200, "OK", msg.c_str(), true);
+    else if (strcmp(method, "TRACE") == 0) 
+    {
+        HandleTraceRequest(socketIndex, path);
     }
     else 
     {
-        constructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", true);
+        ConstructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.",false, true);
     }
 }
 
-void handleTraceRequest(int socketIndex, const char* path) 
+void HandleGetRequest(int socketIndex, const char* path) 
+{
+    const char* lang = GetLangQueryParam(path);
+    wstring htmlBody = GenerateHTMLBody(lang);
+
+    char* toSend = ConvertWstrToCharArray(htmlBody);
+
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend,true, true);
+}
+
+void HandlePostRequest(int socketIndex, const char* path) {
+    const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
+    if (body != NULL)
+    {
+        int givenId;
+        body += 4;  // Skip over the \r\n\r\n
+        AddPhrase(body, &givenId);
+        string msg = "The string \""+ string(body) +"\" was added successfully. Given id : " + to_string(givenId);
+        cout << "Time Server: " << msg << endl;
+        ConstructHttpResponse(socketIndex, 200, "OK", msg.c_str(),false, true);
+    }
+    else 
+    {
+        ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.",false, true);
+    }
+}
+
+void HandleTraceRequest(int socketIndex, const char* path) 
 {
     const char* body = strstr(sockets[socketIndex].buffer, "\r\n\r\n");
     if (body != NULL)
@@ -286,24 +285,24 @@ void handleTraceRequest(int socketIndex, const char* path)
     {
         body = EMPTY_STRING;
     }
-    constructHttpResponse(socketIndex, 200, "OK", body, true);
+    ConstructHttpResponse(socketIndex, 200, "OK", body,false, true);
 }
 
-void handleDeleteRequest(int socketIndex, const char* path)
+void HandleDeleteRequest(int socketIndex, const char* path)
 {
     int idToDelete = GetIdQueryParam(path);
 
     if (idToDelete > 0 && RemovePhrase(idToDelete))
     {
-        constructHttpResponse(socketIndex, 200, "OK", "Removed Succesfully", true);
+        ConstructHttpResponse(socketIndex, 200, "OK", "Removed Succesfully",false, true);
     }
     else
     {
-        constructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", true);
+        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.",false, true);
     }
 }
 
-void handlePutRequest(int socketIndex, const char* path)
+void HandlePutRequest(int socketIndex, const char* path)
 {
     int idToUpdate = GetIdQueryParam(path);
 
@@ -314,42 +313,43 @@ void handlePutRequest(int socketIndex, const char* path)
         {
             body += 4;  // Skip over the \r\n\r\n
             UpdatePhrase(idToUpdate, constConverter(body));
-            constructHttpResponse(socketIndex, 200, "OK", "Updated successfully", true);
+            ConstructHttpResponse(socketIndex, 200, "OK", "Updated successfully",false, true);
         }
         else
         {
-            constructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.", true);
+            ConstructHttpResponse(socketIndex, 400, "Bad Request", "No string in the request.",false, true);
         }
     }
     else
     {
-        constructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", true);
+        ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.",false, true);
     }
 
 }
 
-void handleHeadRequest(int socketIndex, const char* path)
+void HandleHeadRequest(int socketIndex, const char* path)
 {
     const char* lang = GetLangQueryParam(path);
-    //string htmlBody = GenerateHTMLBody(lang);
-    string htmlBody = "";
-    constructHttpResponse(socketIndex, 200, "OK", htmlBody.c_str(), false);
+    wstring htmlBody = GenerateHTMLBody(lang);
+
+    char* toSend = ConvertWstrToCharArray(htmlBody);
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend,true, false);
 }
 
-
-
-void constructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isSendingBody, const char* lang)
+void ConstructHttpResponse(int index, int statusCode, const char* statusMessage,const char* responseBody,bool isDynamicallyAllocated, bool isSendingBody, const char* lang)
 {
-    char* mutuableResponseBody;
-    char empty[1] = "";
+    char* mutuableResponseBody, * bodyToSend;
+    char empty[] = "";
+
+    mutuableResponseBody = const_cast<char*>(responseBody);
 
     if (isSendingBody)
     {
-        mutuableResponseBody = const_cast<char*>(responseBody);
+        bodyToSend = mutuableResponseBody;
     }
     else
     {
-        mutuableResponseBody = empty;
+        bodyToSend = empty;
     }
 
     snprintf(sockets[index].buffer, sizeof(sockets[index].buffer),
@@ -360,7 +360,12 @@ void constructHttpResponse(int index, int statusCode, const char* statusMessage,
     "Connection: close\r\n"
     "\r\n"
     "%s",
-    statusCode, statusMessage, strlen(responseBody), lang, mutuableResponseBody);
+    statusCode, statusMessage, strlen(responseBody), lang, bodyToSend);
+
+    if (isDynamicallyAllocated)
+    {
+        delete responseBody;
+    }
 
     sockets[index].len = strlen(sockets[index].buffer);
     sockets[index].isSendNeeded = true;
@@ -467,16 +472,14 @@ char* GenerateOptionsMenu()
         "[TRACE] - Returns the same body as the request body (echo).\n"
         "[OPTIONS] - Lists all available options.\n";
 
-    // Calculate the length of the menu string
-    size_t length = strlen(menu) + 1; // +1 for the null terminator
 
-    // Allocate memory for the new string
+    size_t length = strlen(menu) + 1; 
+
+
     char* result = new char[length];
 
-    // Copy the menu string into the result buffer
     strcpy(result, menu);
 
-    // Return the result
     return result;
 }
 

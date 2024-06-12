@@ -74,8 +74,8 @@ void HandleTraceRequest(int socketIndex, const char* path);
 
 //HTTP LOGIC HELP FUNCS
 void HandleHttpRequest(int index);
-void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isHeadersOnly, const char* lang = DEFAULT_LANG);
-const char* GetLangQueryParam(const char* path);
+void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isHeadersOnly, string lang = DEFAULT_LANG);
+string GetLangQueryParam(const char* path);
 int GetIdQueryParam(const char* path);
 int ParseContentLength(const char* buffer);
 

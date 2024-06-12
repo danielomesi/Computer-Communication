@@ -57,18 +57,28 @@ wstring ReadFileIntoWString(const char* filename)
     return content;
 }
 
-wstring InsertTextIntoWString(const wstring& data, const wstring& newText, const wstring& insertionPoint)
+wstring InsertTextIntoWString(const wstring& data, const wstring& newText, const wstring& insertionPoint, bool insertBefore)
 {
     size_t insertionPos = data.find(insertionPoint);
-    wstring newData = data.substr(0, insertionPos);
+    std::wstring newData;
 
-    newData += newText;
-    newData += data.substr(insertionPos);
+    if (insertBefore)
+    {
+        newData = data.substr(0, insertionPos);
+        newData += newText;
+        newData += data.substr(insertionPos);
+    }
+    else
+    {
+        newData = data.substr(0, insertionPos + insertionPoint.length());
+        newData += newText;
+        newData += data.substr(insertionPos + insertionPoint.length());
+    }
 
     return newData;
 }
 
-wstring GenerateHTMLBody(const char* lang)
+wstring GenerateHTMLBody(string lang)
 {
     std::wstring htmlBody = ReadFileIntoWString(HTML_FILE_NAME);
     auto translations = GetTranslations(lang);
@@ -94,7 +104,7 @@ wstring GenerateHTMLBody(const char* lang)
     htmlBody = InsertTextIntoWString(htmlBody, ConvertStrToWstr(GetTimeAsString()), timeStampPlaceholder);
 
     wstring langAttributeStr = L"lang=\"";
-    htmlBody = InsertTextIntoWString(htmlBody, ConvertStrToWstr(lang), langAttributeStr);
+    htmlBody = InsertTextIntoWString(htmlBody, ConvertStrToWstr(lang), langAttributeStr, false);
 
     return htmlBody;
 }

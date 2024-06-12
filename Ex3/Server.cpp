@@ -317,12 +317,12 @@ void HandleHttpRequest(int socketIndex)
 
 void HandleGetRequest(int socketIndex, const char* path)
 {
-    const char* lang = GetLangQueryParam(path);
+    string lang = GetLangQueryParam(path);
     wstring htmlBody = GenerateHTMLBody(lang);
 
     char* toSend = ConvertWstrToCharArray(htmlBody);
 
-    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, true);
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, true, lang);
 }
 
 void HandlePostRequest(int socketIndex, const char* path) {
@@ -397,14 +397,14 @@ void HandlePutRequest(int socketIndex, const char* path)
 
 void HandleHeadRequest(int socketIndex, const char* path)
 {
-    const char* lang = GetLangQueryParam(path);
+    string lang = GetLangQueryParam(path);
     wstring htmlBody = GenerateHTMLBody(lang);
 
     char* toSend = ConvertWstrToCharArray(htmlBody);
-    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, false);
+    ConstructHttpResponse(socketIndex, 200, "OK", toSend, true, false, lang);
 }
 
-void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isSendingBody, const char* lang)
+void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isSendingBody, string lang)
 {
     char* mutuableResponseBody, * bodyToSend;
     char empty[] = "";
@@ -428,7 +428,7 @@ void ConstructHttpResponse(int index, int statusCode, const char* statusMessage,
         "Connection: close\r\n"
         "\r\n"
         "%s",
-        statusCode, statusMessage, strlen(responseBody), lang, bodyToSend);
+        statusCode, statusMessage, strlen(responseBody), lang.c_str(), bodyToSend);
 
     if (isDynamicallyAllocated)
     {
@@ -440,20 +440,20 @@ void ConstructHttpResponse(int index, int statusCode, const char* statusMessage,
     sockets[index].isSendNeeded = true;
 }
 
-const char* GetLangQueryParam(const char* path)
+string GetLangQueryParam(const char* path)
 {
     const char* langParamKey = "lang=";
     int lenToSkip = strlen(langParamKey);
 
     const char* lang = strstr(path, "lang=");
-    char res[3];
+    string res;
+    char temp;
     if (lang != NULL)
     {
         lang += lenToSkip;
         if (strncmp(lang, "en", 2) == 0 || strncmp(lang, "he", 2) == 0 || strncmp(lang, "fr", 2) == 0 || strncmp(lang, "es", 2) == 0)
         {
-            strncpy(const_cast<char*>(res), lang, 2);
-            res[2] = '\0';
+            res = string(lang, 2);
             return res;
         }
     }

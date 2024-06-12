@@ -311,7 +311,7 @@ void HandleHttpRequest(int socketIndex)
     }
     else
     {
-        ConstructHttpResponse(socketIndex, 501, "Not Implemented", "This server only supports GET and POST.", false, true);
+        ConstructHttpResponse(socketIndex, 501, "Not Implemented", "This server doesn't support this method. Please send a request with OPTIONS method for further info.", false, true);
     }
 }
 

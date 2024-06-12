@@ -368,6 +368,7 @@ void HandleDeleteRequest(int socketIndex, const char* path)
     {
         ConstructHttpResponse(socketIndex, 404, "Not Found", "The requested resource was not found on this server.", false, true);
     }
+
 }
 
 void HandlePutRequest(int socketIndex, const char* path)
@@ -462,7 +463,7 @@ string GetLangQueryParam(const char* path)
 
 int GetIdQueryParam(const char* path)
 {
-    int idNum;
+    int idNum = 0;
     const char* idParamKey = "id=";
     int lenToSkip = strlen(idParamKey);
 
@@ -471,9 +472,15 @@ int GetIdQueryParam(const char* path)
     if (id != NULL)
     {
         id += lenToSkip;
-    }
+        try
+        {
+            idNum = atoi(id);
+        }
+        catch (...)
+        {
 
-    idNum = atoi(id);
+        }
+    }
 
     return idNum;
 }

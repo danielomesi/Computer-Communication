@@ -28,15 +28,17 @@ using namespace std;
 #define DEFAULT_LANG "he"
 #define EMPTY_STRING ""
 #define BUFFER_SIZE 8192
+#define NOT_FOUND -1
 
 typedef struct SocketState
 {
     SOCKET sock;                            
-    int socket_type;                        //  "LISTEN" or "CLIENT_CHANNEL"
+    int socket_type;                        //  "LISTEN" or "CLIENT_CHANNEL" or "EMPTY"
     bool isWaitingForClientMsg;             
     bool isSendNeeded;                      
     char buffer[BUFFER_SIZE];   
     int len;
+    time_t lastActivity;
 } SocketState;
 
 typedef struct Phrase
@@ -60,6 +62,7 @@ void PerformExit();
 SOCKET GetListenSocket();
 void BindServerAddressToListenSocket(SOCKET& listenSocket, sockaddr_in& serverService);
 void ListenForClients(SOCKET& listenSocket);
+void CheckForTimeouts();
 char* GenerateOptionsMenu();
 
 //HTTP METHODS HANDLERS
@@ -75,5 +78,5 @@ void HandleHttpRequest(int index);
 void ConstructHttpResponse(int index, int statusCode, const char* statusMessage, const char* responseBody, bool isDynamicallyAllocated, bool isHeadersOnly, const char* lang = DEFAULT_LANG);
 const char* GetLangQueryParam(const char* path);
 int GetIdQueryParam(const char* path);
-
+int ParseContentLength(const char* buffer);
 

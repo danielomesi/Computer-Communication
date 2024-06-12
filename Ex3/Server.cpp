@@ -1,3 +1,4 @@
+//Daniel Omesi, 207689092, Ido Beit On, 208538488
 #include "Server.h"
 #include "Functions.h"
 
@@ -6,7 +7,7 @@ SocketState sockets[MAX_SOCKETS] = { 0 };
 vector<Phrase> phrases;
 int socketsCount = 0;
 
-//to check the 2 minutes thing in the task
+
 
 int main()
 {
@@ -89,13 +90,14 @@ bool AddSocket(SOCKET id, int status)
 {
     for (int i = 0; i < MAX_SOCKETS; i++)
     {
-        if (sockets[i].isWaitingForClientMsg == EMPTY)
+        if (sockets[i].socket_type == EMPTY)
         {
             sockets[i].sock = id;
             sockets[i].socket_type = status;
             sockets[i].isWaitingForClientMsg = true;
             sockets[i].isSendNeeded = false;
             sockets[i].len = 0;
+            sockets[i].lastActivity = time(NULL);
             socketsCount++;
             return true;
         }
@@ -105,8 +107,8 @@ bool AddSocket(SOCKET id, int status)
 
 void RemoveSocket(int index)
 {
-    sockets[index].isWaitingForClientMsg = EMPTY;
-    sockets[index].isSendNeeded = EMPTY;
+    closesocket(sockets[index].sock);
+    sockets[index].socket_type = EMPTY;
     socketsCount--;
 }
 
@@ -146,13 +148,11 @@ void ReceiveMessage(int index)
     if (SOCKET_ERROR == bytesRecv) 
     {
         cout << "Time Server: Error at recv(): " << WSAGetLastError() << endl;
-        closesocket(sock);
         RemoveSocket(index);
         return;
     }
     if (bytesRecv == 0)
     {
-        closesocket(sock);
         RemoveSocket(index);
         return;
     }
@@ -163,12 +163,24 @@ void ReceiveMessage(int index)
         cout << "---start---" << endl;
         cout<<&sockets[index].buffer[len] << endl;
         cout << "---end---" << endl;
-        sockets[index].len += bytesRecv;
+        sockets[index].len += bytesRecv; 
+    }
 
-        if (sockets[index].len > 0)
-        {
-            HandleHttpRequest(index);
-        }
+    int contentLength = ParseContentLength(sockets[index].buffer);
+    if (contentLength == NOT_FOUND)
+    {
+        cout << "Time Server: Missing or invalid Content-Length header" << endl;
+        RemoveSocket(index);
+        return;
+    }
+
+    if (sockets[index].len >= contentLength)
+    {
+        HandleHttpRequest(index);
+    }
+    else
+    { 
+        sockets[index].lastActivity = time(NULL);
     }
 }
 
@@ -232,6 +244,19 @@ void ListenForClients(SOCKET& listenSocket)
         closesocket(listenSocket);
         WSACleanup();
         PerformExit();
+    }
+}
+
+void CheckForTimeouts()
+{
+    time_t currentTime = time(NULL);
+    for (int i = 0; i < MAX_SOCKETS; i++)
+    {
+        if (sockets[i].socket_type = CLIENT_CHANNEL && sockets[i].isWaitingForClientMsg && (currentTime - sockets[i].lastActivity) > 120)
+        { 
+            cout << "Time Server: Closing connection due to timeout for socket " << i << endl;
+            RemoveSocket(i);
+        }
     }
 }
 
@@ -417,6 +442,7 @@ void ConstructHttpResponse(int index, int statusCode, const char* statusMessage,
     }
 
     sockets[index].len = strlen(sockets[index].buffer);
+    sockets[index].isWaitingForClientMsg = false;
     sockets[index].isSendNeeded = true;
 }
 
@@ -456,4 +482,16 @@ int GetIdQueryParam(const char* path)
     idNum = atoi(id);
 
     return idNum;
+}
+
+int ParseContentLength(const char* buffer) 
+{
+    const char* contentLengthStr = "Content-Length: ";
+    const char* found = strstr(buffer, contentLengthStr);
+    if (found)
+    {
+        found += strlen(contentLengthStr);
+        return atoi(found);
+    }
+    return NOT_FOUND;
 }

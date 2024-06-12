@@ -24,7 +24,7 @@ using namespace std;
 #define GET 1
 #define POST 2
 #define HTML_FILE_NAME "index.html"
-#define HTML_FILE_DIRECTORY_PATH "C:\\Temp"
+#define HTML_FILE_DIRECTORY_PATH "C:\\temp"
 #define DEFAULT_LANG "he"
 #define EMPTY_STRING ""
 #define BUFFER_SIZE 8192

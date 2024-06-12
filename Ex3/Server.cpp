@@ -166,15 +166,9 @@ void ReceiveMessage(int index)
         sockets[index].len += bytesRecv; 
     }
 
-    int contentLength = ParseContentLength(sockets[index].buffer);
-    if (contentLength == NOT_FOUND)
-    {
-        cout << "Time Server: Missing or invalid Content-Length header" << endl;
-        RemoveSocket(index);
-        return;
-    }
+    int lengthOfBodyOnly = ParseContentLength(sockets[index].buffer);
 
-    if (sockets[index].len >= contentLength)
+    if (lengthOfBodyOnly == 0 || sockets[index].len >= lengthOfBodyOnly)
     {
         HandleHttpRequest(index);
     }
@@ -493,5 +487,5 @@ int ParseContentLength(const char* buffer)
         found += strlen(contentLengthStr);
         return atoi(found);
     }
-    return NOT_FOUND;
+    return 0;
 }

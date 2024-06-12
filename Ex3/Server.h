@@ -28,7 +28,6 @@ using namespace std;
 #define DEFAULT_LANG "he"
 #define EMPTY_STRING ""
 #define BUFFER_SIZE 8192
-#define NOT_FOUND -1
 
 typedef struct SocketState
 {

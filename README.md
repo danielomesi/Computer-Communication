@@ -15,3 +15,6 @@ This project implements a lightweight **non-blocking HTTP server** that supports
 - 🔹 Implements **HTTP parsing and response generation** from scratch.  
 - 🔹 Designed to support **real-time debugging and monitoring** via Wireshark.  
 - 🔹 Ensures **efficient resource management** by closing inactive connections.  
+
+
+![image](readme-images/server.png)
